@@ -149,7 +149,7 @@ def gen_data():
     data_uC1 = []
     data_DT = []
     n_steps = 100
-    DT = 0.1
+    DT = 0.04
     with torch.no_grad():
         for i in range(n_steps):
             print(i)
