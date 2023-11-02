@@ -6,7 +6,7 @@ import h5py
 import torch.utils.data
 
 
-
+# Address the boundary conditions
 def cal_boundry(u, igst):
     m, n, l = u.shape
     u = torch.cat((u[:, :, igst:igst+1].expand(m,n,igst), u[:, :, igst: -igst], u[:, :, -igst-1:-igst].expand(m,n,igst)), dim=2)
@@ -32,6 +32,7 @@ def plot_u(x0, ur, un, ut):
     plt.draw()
     plt.pause(0.1)
 
+# Define a residual block for the neural network
 class ResidualBlock(nn.Module):
     def __init__(self, inchannel, outchannel, kernel_size=1):
         super(ResidualBlock, self).__init__()
@@ -56,7 +57,7 @@ class ResidualBlock(nn.Module):
         out = F.relu(out)
         return out
 
-
+#  Define the ODE neural network model class
 class ODEnet(nn.Module):
     def __init__(self, dx, igst, eps):
         super(ODEnet, self).__init__()
@@ -119,7 +120,7 @@ class ODEnet(nn.Module):
             z = z + h * self.cal_du(z)
         return z
 
-
+# Parameters related to the problem domain
 device = 'cuda:0'
 device = torch.device(device) if torch.cuda.is_available() else torch.device('cpu')
 igst = 10
@@ -139,6 +140,7 @@ x0f[:, :, l + igst:l + igst * 2] = x0[:, :, 0:igst] + lx
 x0f[:, :, igst:l + igst] = x0[:, :, 0:l]
 time_size = 100
 
+# Function to test the model with pre-loaded data, and write the results and errors into files
 def test():
     f_neur.load_state_dict(torch.load("model.pt", map_location=lambda storage, location: storage))
     f_neur.to(device)
@@ -187,7 +189,7 @@ def test():
             plot_u(x0f, uR[i, check_dim, :], uF[:, check_dim, :], uA[i, check_dim, :])
             uF = f_neur(uF, DT)
 
-
+#Parsing the data
 class Dataset(torch.utils.data.Dataset):
     def __init__(self, data_type):
         f = h5py.File('data.h5')
@@ -207,7 +209,7 @@ class Dataset(torch.utils.data.Dataset):
     def __len__(self):
         return self.uC0.shape[0]
 
-
+# Train the neural network
 def train():
     n_epoch = 1000
     optimizer = torch.optim.Adam(f_neur.parameters(), lr=0.001)
@@ -247,7 +249,7 @@ def train():
             torch.save(f_neur.state_dict(), "model.pt")
             lowest_test_loss = test_loss / test_sample
 
-
+# Main execution of the script begins here.
 if __name__ == '__main__':
     train()
     test()
