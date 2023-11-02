@@ -5,6 +5,8 @@ import torch.nn as nn
 import h5py
 import os
 
+
+# Define parameters for the simulation
 igst = 10
 grid_size = 200
 xs = -0.5
@@ -28,13 +30,13 @@ print(A)
 Lam = torch.tensor([1,1,-1])
           
                 
-
+#Address boudary conditions
 def cal_boundry(u, igst):
     m, n, l = u.shape
     u = torch.cat((u[:, :, igst:igst+1].expand(m,n,igst), u[:, :, igst: -igst], u[:, :, -igst-1:-igst].expand(m,n,igst)), dim=2)
     return u
 
-
+# 4th order Runge Kutta scheme
 def runge_kutta(z0, t1_t0, f, eps=0.001):
     n_steps = round(t1_t0 / eps)
     h = t1_t0 / n_steps
@@ -45,11 +47,11 @@ def runge_kutta(z0, t1_t0, f, eps=0.001):
         z = cal_boundry(z/3. + 2.*k2/3. + 2. * h * f(k2)/3., igst)
     return z
 
-
+# Convert PyTorch tensor to numpy array
 def to_np(x):
     return x.detach().cpu().numpy()
 
-
+# Definition of a neural ODE model
 class NeuralODE(nn.Module):
     def __init__(self, func, tol=1e-3):
         super(NeuralODE, self).__init__()
@@ -60,7 +62,7 @@ class NeuralODE(nn.Module):
         return runge_kutta(z0, t1_t0, self.func, self.tol)
 
 
-
+#Analytic solution function
 def any_solution(x0f,t):
     ul = [0.4,0.4,0.4]
     ur = [-0.4,-0.4,-0.4]
@@ -79,6 +81,7 @@ def any_solution(x0f,t):
                 datau[i, index] = datau[i, index] +R[i,j] * data[j,index]
     return datau
 
+#Construct RoeNet
 class Roe(nn.Module):
     def __init__(self, dx):
         super(Roe, self).__init__()
@@ -104,6 +107,7 @@ class Roe(nn.Module):
              
         return -(Rur + Rul) / (2 * self.dx)
 
+# Generate analytic solution
 def gen_Any_data():
     DT = 0.02
     data_uC0 = any_solution(x0f,tstart).unsqueeze(0)
@@ -114,7 +118,8 @@ def gen_Any_data():
             tp = any_solution(x0f,t).unsqueeze(0)
             data_uC0 = torch.cat((data_uC0,tp),0).float()
     torch.save(data_uC0, 'uAny.dat')
-    
+
+# Generate data for testing
 def gen_test_data():
     data_uC0 = []
     data_DT = []
@@ -131,6 +136,8 @@ def gen_test_data():
             uC0 = runge_kutta(uC0, DT, ff, 1e-3)
     data_uC0 = torch.cat(data_uC0).float()
     torch.save(data_uC0, 'uRoe.dat')
+
+#Plotting the results
 def plot_u(x0, ur):
     plt.clf()
     x = to_np(torch.squeeze(x0))
@@ -141,7 +148,8 @@ def plot_u(x0, ur):
     plt.ylim(-6, 6)
     plt.draw()
     plt.pause(0.1)
-    
+          
+# Generate data for training    
 def gen_data():
     data_uC0 = []
     data_uC1 = []
@@ -171,7 +179,7 @@ def gen_data():
     hf.create_dataset('DT', data=data_DT)
     hf.close()
 
-
+# Execute the data generation functions
 gen_data()
 gen_test_data()
 gen_Any_data()
