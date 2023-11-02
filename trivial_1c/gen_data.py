@@ -5,12 +5,15 @@ import torch.nn as nn
 import h5py
 import os
 
-igst = 10
-grid_size = 100
-xs = -0.5
-xe = 0.5
-lx = xe - xs
-dx = lx / grid_size
+
+# Define parameters for the simulation
+igst = 10  # A parameter related to boundary conditions (might represent ghost points for implementing boundary conditions)
+grid_size = 100  # The size of the grid upon which calculations are performed
+xs = -0.5  # Start coordinate
+xe = 0.5  # End coordinate
+lx = xe - xs  # Total length of the space domain
+dx = lx / grid_size  # Space step size
+# Prepare the initial grid setup
 x0 = torch.tensor(range(grid_size), dtype=torch.float32, requires_grad=True).unsqueeze(0).unsqueeze(0) * lx / grid_size + xs
 m, n, l = x0.shape
 x0f = torch.zeros(m, n, l + igst * 2)
@@ -25,12 +28,14 @@ L = torch.tensor([1.]).reshape([nconp,nconp])
 R = torch.inverse(L)
 #Lam = torch.randn(nconp)
 Lam = torch.tensor([1.])
+
+#Address boudary conditions
 def cal_boundry(u, igst):
     m, n, l = u.shape
     u = torch.cat((u[:, :, -2*igst:-igst], u[:, :, igst: -igst], u[:, :, igst:2*igst]), dim=2)
     return u
 
-
+# 4th order Runge Kutta scheme
 def runge_kutta(z0, t1_t0, f, eps=0.001):
     n_steps = round(t1_t0 / eps)
     h = t1_t0 / n_steps
@@ -41,11 +46,11 @@ def runge_kutta(z0, t1_t0, f, eps=0.001):
         z = cal_boundry(z/3. + 2.*k2/3. + 2. * h * f(k2)/3., igst)
     return z
 
-
+# Convert PyTorch tensor to numpy array
 def to_np(x):
     return x.detach().cpu().numpy()
 
-
+# Definition of a neural ODE model
 class NeuralODE(nn.Module):
     def __init__(self, func, tol=1e-3):
         super(NeuralODE, self).__init__()
@@ -55,7 +60,8 @@ class NeuralODE(nn.Module):
     def forward(self, z0, t1_t0):
         return runge_kutta(z0, t1_t0, self.func, self.tol)
 
-    
+
+#Central differencing scheme
 class CentDif(nn.Module):
     def __init__(self, dx, igst):
         super(CentDif, self).__init__()
@@ -73,6 +79,7 @@ class CentDif(nn.Module):
         adu[:,1,:] = 2*du[:,0,:]+u[:,1,:]*du[:,1,:]
         return -adu
 
+#Analytic solution function
 def any_solution(x0f,t):
     m, n, l = x0f.shape
     u = torch.zeros(1,l)
@@ -81,6 +88,7 @@ def any_solution(x0f,t):
         u[0,index] = torch.exp(-300.*torch.pow(tp,2.))
     return u
 
+#Construct RoeNet
 class Roe(nn.Module):
     def __init__(self, dx):
         super(Roe, self).__init__()
@@ -106,6 +114,7 @@ class Roe(nn.Module):
              
         return -(Rur + Rul) / (2 * self.dx)
 
+# Generate analytic solution
 def gen_Any_data():
     DT = 0.02
     data_uC0 = any_solution(x0f,tstart).unsqueeze(0)
@@ -116,7 +125,8 @@ def gen_Any_data():
             tp = any_solution(x0f,t).unsqueeze(0)
             data_uC0 = torch.cat((data_uC0,tp),0).float()
     torch.save(data_uC0, 'uAny.dat')
-    
+
+# Generate data for testing
 def gen_test_data():
     data_uC0 = []
     data_DT = []
@@ -126,13 +136,17 @@ def gen_test_data():
     ff.eval()
     with torch.no_grad():
         for i in range(n_steps+1):
+            #t=1
             t = i*DT+tstart
             print(t)
             data_uC0.append(uC0)
             data_DT.append(t)
+            #eps decrease
             uC0 = runge_kutta(uC0, DT, ff, 1e-3)
     data_uC0 = torch.cat(data_uC0).float()
     torch.save(data_uC0, 'uRoe.dat')
+
+#Plotting the results
 def plot_u(x0, ur):
     plt.clf()
     x = to_np(torch.squeeze(x0))
@@ -143,7 +157,8 @@ def plot_u(x0, ur):
     plt.ylim(-0.5, 1.5)
     plt.draw()
     plt.pause(0.01)
-    
+
+# Generate data for training
 def gen_data():
     data_uC0 = []
     data_uC1 = []
@@ -174,6 +189,7 @@ def gen_data():
     hf.close()
 
 
+# Execute the data generation functions
 gen_data()
 gen_test_data()
 gen_Any_data()

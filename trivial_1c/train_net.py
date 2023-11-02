@@ -5,13 +5,13 @@ import torch.nn as nn
 import h5py
 import torch.utils.data
 
-
+# Address the boundary conditions
 def cal_boundry(u, igst):
     m, n, l = u.shape
     u = torch.cat((u[:, :, -2*igst:-igst], u[:, :, igst: -igst], u[:, :, igst:2*igst]), dim=2)
     return u
 
-
+# Define a residual block for the neural network
 class ResidualBlock(nn.Module):
     def __init__(self, inchannel, outchannel, kernel_size=3):
         super(ResidualBlock, self).__init__()
@@ -36,7 +36,7 @@ class ResidualBlock(nn.Module):
         out = F.relu(out)
         return out
 
-
+# Define the ODE neural network model class
 class ODEnet(nn.Module):
     def __init__(self, dx, igst, eps):
         super(ODEnet, self).__init__()
@@ -101,7 +101,7 @@ class ODEnet(nn.Module):
             z = cal_boundry(z + h * self.cal_du(z), self.igst)
         return z
 
-
+# Parameters related to the problem domain
 device = 'cuda:0'
 device = torch.device(device) if torch.cuda.is_available() else torch.device('cpu')
 igst = 10
@@ -120,10 +120,12 @@ x0f[:, :, 0:igst] = x0[:, :, l - igst:l] - lx
 x0f[:, :, l + igst:l + igst * 2] = x0[:, :, 0:igst] + lx
 x0f[:, :, igst:l + igst] = x0[:, :, 0:l]
 time_size = 101
+
+# Utility function for converting PyTorch tensor to NumPy array
 def to_np(x):
     return x.detach().cpu().numpy()
 
-
+# Function for plotting the results.
 def plot_u(x0, ur, un, ut):
     plt.clf()
     x = to_np(torch.squeeze(x0))
@@ -138,7 +140,8 @@ def plot_u(x0, ur, un, ut):
     plt.ylim(-0.5, 1.5)
     plt.draw()
     plt.pause(0.01)
-    
+
+# Function to test the model with pre-loaded data, and write the results and errors into files
 def test():
     device = 'cpu'
     f_neur.load_state_dict(torch.load("model.pt", map_location=lambda storage, location: storage))
@@ -185,7 +188,7 @@ def test():
             plot_u(x0f, uR[i, check_dim, :], uF[:, check_dim, :], uA[i, check_dim, :])
             uF = f_neur(uF, DT)
 
-
+#Parsing the data
 class Dataset(torch.utils.data.Dataset):
     def __init__(self, data_type):
         f = h5py.File('data.h5')
@@ -205,7 +208,7 @@ class Dataset(torch.utils.data.Dataset):
     def __len__(self):
         return self.uC0.shape[0]
 
-
+# Train the neural network
 def train():
     
     n_epoch = 500
@@ -264,7 +267,7 @@ def train():
             f.write('\n')      
             torch.save(f_neur.state_dict(), "model.pt")
 
-
+# Main execution of the script begins here.
 if __name__ == '__main__':
     train()
     test()
