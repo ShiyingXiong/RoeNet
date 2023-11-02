@@ -16,6 +16,7 @@ In order to train a Roenet:
 * Burgers: `python3 nontrivial_1c/train_net.py`
 * Sod Tube: `python3 nontrivial_3c/train_net.py`
 * 2D Linear/Nonlinear: `python3 2d_wave/train_net.py`
+* Ablation Test on Computational Cost: `trivial_1c_grid`
 
 ## Problem setups
 
