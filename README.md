@@ -16,7 +16,9 @@ In order to train a Roenet:
 * Burgers: `python3 nontrivial_1c/train_net.py`
 * Sod Tube: `python3 nontrivial_3c/train_net.py`
 * 2D Linear/Nonlinear: `python3 2d_wave/train_net.py`
-* Ablation Test on Computational Cost: `trivial_1c_grid`
+* Ablation Test on Computational Cost: `python3 trivial_1c_grid`
+
+Please note: Each experimental folder is designed to function independently. Every folder contains a file for training and a file for data generation. Since the file structure is similar across folders, detailed commentary has been provided in the trivial_1c folder. This should help users understand the file functionalities, which are largely consistent throughout. The differences in the codes for each experiment primarily lie in the formulas used to generate data and the specific configurations of the neural network matrices.
 
 ## Problem setups
 
