@@ -19,7 +19,8 @@ In order to train a Roenet:
 
 ## Problem setups
 
-![](https://github.com/ShiyingXiong/RoeNet/blob/main/Figure/setup.png)
+![](https://github.com/ShiyingXiong/RoeNet/blob/main/Figure/Setup.png)
+
 
 
 ## Results
